@@ -1,0 +1,60 @@
+#!/bin/bash
+echo "WP BACKUP AND UPDATE"
+
+if [ $# -eq 0 ];then
+    echo "Bitte gebe den Pfad zur WP-Installation und zum Backups-Ordner an!"
+    exit 1
+elif [ $# -eq 1 ];then
+    echo "Bitte gebe zum Backups-Ordner an!"
+    exit 1
+fi
+
+wp="wp-cli/wp-cli.phar" #Pfad zur ausführbaren wp-cli.phar
+
+FILENAME="$(date +%y-%m-%d)_${1///}"
+
+#Backups durchführen
+DB_EXPORT="$($wp db export $FILENAME.sql --path=$1)"
+echo "Erstelle Backup in $FILENAME.tar.gz."
+tar -czf $FILENAME.tar.gz $1 $FILENAME.sql
+mv $FILENAME.tar.gz $2
+rm $FILENAME.sql 
+echo "Backup erstellt und in $2 verschoben."
+
+# Updates allgemein
+CORE_UPDATE="$($wp core update --path=$1)"
+PLUGIN_UPDATES="$($wp plugin update --all --path=$1)"
+THEME_UPDATES="$($wp theme update --all --path=$1)"
+
+# Übersetzungen updaten
+CORE_LANGUAGE_UPDATE="$(${wp} language core update --path=${1})"
+PLUGIN_LANGUAGE_UPDATES="$(${wp} language plugin update --all --path=${1})"
+THEME_LANGUAGE_UPDATES="$(${wp} language theme update --all --path=${1})"
+
+#Statusmail
+
+echo -e "Hej,
+hier dein automatischer Report des WP-CLI-Skripts für Backups deiner Daten und Updates von WordPress-Core, Plugins und Themes von $1.
+
+Backup:
+${DB_EXPORT}
+ 
+Core-Updates:
+${CORE_UPDATE}
+ 
+Plugin-Updates:
+${PLUGIN_UPDATES}
+ 
+Theme-Updates:
+${THEME_UPDATES}
+
+Language-Updates:
+Core:       ${CORE_UPDATE}
+Plugins:    ${PLUGIN_UPDATES}
+Themes:     ${THEME_UPDATES}
+
+Viele Grüße,
+Sandra von emsgold.de"
+ 
+# printf $STATUS_TEXT
+# mail -s "WP-CLI-Report für example.com" sandra@emsgold.de <<< "$MAIL_TEXT"
